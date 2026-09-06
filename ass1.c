@@ -74,9 +74,7 @@
 
 /**********************************************************************/
 
-// this constant controls whether or not extra output is generated,
-// make sure is set to 0 for your final submission
-#define DEBUG 1
+#define DEBUG 0
 
 #define MAX_LINES 999           // max number of input lines
 #define MAX_CHARS  80           // max number of characters per line
@@ -84,33 +82,33 @@
 #define TOP_SCORES  5           // number of top-scoring lines to keep
 #define MAX_MATCH  10           // maximum match length permitted
 
-// add in any further #defines that you want here
-
 /**********************************************************************/
 
+// line_t: an array of MAX_CHARS+1 letters;
+// the extra 1 character is needed for '\0', 
+// the null character that marks the end of a C string
 typedef char line_t[MAX_CHARS+1];
-
-// add in any further typedefs that you want here
 
 /**********************************************************************/
 
 int  read_one_line(line_t line, int max);
+int line_length(line_t line);
+double average_length(line_t lines[], int nlines);
 void  print_stage(int stg);
 void  tadaa(void);
-
-// add in any further function prototypes that you want here
 
 /**********************************************************************/
 
 int
 main(int argc, char *argv[]) {
-	
-	// you have to write the body of the main function, but don't
-	// make it too long, it should control the traffic flow and use
-	// functions to do the actual work
 
-	line_t line;
+	// lines stores every input line
+	line_t lines[MAX_LINES];
+
+	// stores the length returned by read_one_line()
 	int len;
+
+	// number of lines successfully read so far 
 	int nlines = 0;
 
 	// this first loop is here to show you how to access the strings
@@ -123,23 +121,39 @@ main(int argc, char *argv[]) {
 		printf("\n");
 	}
 
-	// this is where your solution starts, reading the input lines
-	// one by one; your task is to decide what processing must happen
-	// on each line after it has been read, and then implement added
-	// functionality to achieve that outcome, you can choose
-	// whether to retain, modify, or replace this indicative loop,
-	// but I'll give you a hint to think about functions and arrays!
-	while ((len = read_one_line(line, MAX_CHARS)) != EOF) {
+	// read stdin one line at a time;
+	// the first condition prevents writing beyond lines[MAX_LINES-1]
+	while (nlines < MAX_LINES && 
+		  (len = read_one_line(lines[nlines], MAX_CHARS)) != EOF) {
 		
-		// successfully read another line, now process it
-
 		// this printf is also for debugging purposes and the
 		// output it generates should NOT be showing when you
 		// submit your final program
 		if (DEBUG) {
-			printf("%3d: %s\n", nlines, line);
+			printf("%3d: %s\n", nlines, lines[nlines]);
 		}
+
 		nlines += 1;
+	}
+
+	print_stage(1);
+
+	// avoid dividing by 0 or 
+	// accessing lines[0] when there are no input lines
+	if (nlines > 0) {
+		// print the average length of all stored input lines
+		printf("average line = %.2f characters\n", 
+			   average_length(lines, nlines));
+		
+		// print the first input line and its length
+		printf("line   0:\n");
+		printf("-> %s\n", lines[0]);
+		printf("-> length = %3d\n", line_length(lines[0]));
+
+		// print the final stored line and its length
+		printf("line %3d:\n", nlines - 1);
+		printf("-> %s\n", lines[nlines - 1]);
+		printf("-> length = %3d\n", line_length(lines[nlines - 1]));
 	}
 
 	// and at the end, a traditional comp10002 sign-off...
@@ -168,15 +182,13 @@ tadaa(void) {
 
 /**********************************************************************/
 
-// function to read one line from stdin into character array, see Section
-// 7.8 and 7.9 of the textbook to understand how this works
+// function to read one line from stdin into character array
 // returns either EOF or the length of the string placed into line[], up
 // to a maximum of "max" characters
-
 int
 read_one_line(line_t line, int max) {
 
-	int len=0, c;
+	int len = 0, c;
 
 	// read input characters one by one
 	while ( (c = getchar()) != EOF) {
@@ -210,5 +222,23 @@ read_one_line(line_t line, int max) {
 
 }
 
-/**********************************************************************/
+// return the number of actual characters in one line
+int
+line_length(line_t line) {
+	return strlen(line);
+}
 
+// calculate the average length of all lines stored in lines[];
+// line_t lines[]: an array of line_t objects,
+// effectively an array of many lines
+double
+average_length(line_t lines[], int nlines) {
+	int total = 0;
+
+	for (int i = 0; i < nlines; i++) {
+		total += line_length(lines[i]);
+	}
+
+	return (double) total / nlines;
+}
+/**********************************************************************/
