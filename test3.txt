@@ -1,0 +1,740 @@
+%% Author: Alistair Moffat, ammoffat@unimelb.edu.au
+%% Date:   August 2026
+%% 
+\documentclass[11pt,times]{article}
+
+\usepackage{times}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{epsf}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{multirow}
+
+\renewcommand{\ttdefault}{cmtt}
+\newcommand{\cmp}[1]{{\mbox{\tt{#1}}}}
+\newcommand{\var}[1]{{\mbox{\emph{#1}}}}
+
+\usepackage[a4paper,margin=27mm]{geometry}
+
+\newcommand{\D}{\hphantom{0}}
+\newcommand{\keypoint}[1]{{\bf #1}}
+
+\renewcommand{\baselinestretch}{1.00}
+
+\setlist[itemize,1]{leftmargin=6mm,itemsep=0mm}
+\setlist[enumerate,1]{leftmargin=6mm,itemsep=0mm}
+
+\begin{document}
+
+
+\begin{center}
+{\bf School of Computing and Information Systems}\\[1mm]
+{\Large\bf
+comp10002 Foundations of Algorithms\\[1mm]
+Semester 2, 2026}\\[2mm]
+{\Large\bf Assignment 1 -- 20 marks, 5\% of final grade}
+\end{center}
+
+
+\subsection*{Learning Outcomes}
+
+In this assignment you will demonstrate your understanding of arrays,
+strings, functions, and the {\cmp{typedef}} facility.
+You may also (but are not required to) use {\cmp{struct}}s (Chapter
+8) if you wish.
+You must {\emph{not}} make any use of file operations (Chapter 11) in
+this project, and are also strongly discouraged from using
+{\cmp{malloc()}} (Chapter 10).
+
+\subsection*{The Story...}
+
+We all know that most software applications support the use of
+{\verb+^F+} (command- or control-F) to search.
+Used from the commandline, the Unix tool {\cmp{grep}} provides the
+same ability, and scans text files to identify the lines in files
+that exactly match a pattern supplied as a command-line argument.
+However there are also times when we want to perform a less precisely
+defined search, looking for partial matches against multiple strings,
+rather than exact matches against one string.
+For example, we might be unsure of how to spell someone's name, and
+hope that the search for ``{\cmp{alister moffet}}'' helps us also
+find references to ``{\cmp{Alistair Moffat}}'' and ``{\cmp{Alastair
+Moffet}}''.
+
+In this project you will write a program that reads text from
+{\cmp{stdin}}, generates a score for each input line relative to
+a multi-term query supplied on the command-line, and then, once the
+end of the input is reached, prints out a set of input lines that
+have the highest scores.
+You do {\emph{not}} need to implement the clever pattern search
+algorithms that will get discussed in class; and are encouraged to
+use straightforward techniques, including any suitable functions in
+{\cmp{string.h}}.
+Over a typical query of a few terms and an input of a thousand lines,
+simple implementations should still operate quickly.
+
+\subsection*{Input Data}
+
+Input to your program will come in two parts: a {\emph{query}},
+specified on the command-line (see Section 7.11 of the textbook) as a
+sequence of strings; and lines of text, to be (always) read from
+{\cmp{stdin}}.
+{\emph{If you vary from these requirements the automated testing
+process may fail your program!}}
+
+A range of text input data will be used during the post-submission
+testing, and some initial ``visible tests'' are also linked from the
+LMS assignment page.
+You should also check your program against other inputs.
+Testing and debugging is {\emph{your}} responsibility.
+
+\subsection*{Stage 0 -- Start Early! (marks up to 0/20)}
+
+Your first step is to copy and read the skeleton program
+{\cmp{ass1-skel.c}} from the LMS Assignment 1 page.
+Check that you can compile it via using either a fresh {\cmp{Ed
+Lessons}} workspace (see the guide in the LMS, ``Modules
+$\rightarrow$ Compiling and Editing $\rightarrow$ Guides to Using Ed
+Lessons'') or a terminal shell and {\cmp{gcc}}.
+Then study what it does, and try some sample executions, either
+typing few lines of input from the keyboard, or running it over a
+text file from your computer, perhaps one of the test files:
+\begin{verbatim}
+    mac: ./ass1-skel fee fi fo fum < test1.txt
+\end{verbatim}
+Make sure that you understand the role of the {\cmp{DEBUG}} constant.
+Try changing it to {\cmp{0}} and compile and run again.
+(And make sure it is {\cmp{0}} before you make your final
+submission.)
+
+\subsection*{Stage 1 -- Building Arrays (marks up to 12/20)}
+
+Modify the skeleton program so that the input text is read into an
+array.
+You are to assume that the number of input lines will never exceed
+{\cmp{MAX\_LINES}} (set to 999), and that the number of characters in
+any line will never exceed {\cmp{MAX\_CHARS}} (set to 80).
+Any input beyond these two limits may be silently discarded.
+Here is what your output should be for the test file
+{\cmp{test1.txt}} (from the LMS Assignment 1 page), printing out the
+average line length, and then the first and last input lines and
+their lengths:
+%%  0123456789012345678901234567890123456789
+\begin{verbatim}
+    Stage 1
+    -------
+    average input line = 51.44 characters
+    line   0:
+    -> Programming is fun and functions are fun.
+    -> length =  41
+    line   8:
+    -> Functions are often full of useful funny!
+    -> length =  41
+\end{verbatim}
+The goal of this stage is simply for you to read the data into an
+array.
+That means rewriting parts of the skeleton program as well as adding
+new functions to it.
+Note that the line numbers start at zero.
+
+\subsection*{Stage 2 -- Computing Scores (marks up to 16/20)}
+
+The next step is to calculate a {\emph{score}} for each input line in
+connection with the ``query'' provided on the commandline.
+The skeleton program shows you how to access the ${\cmp{argc}}-1$
+program arguments.
+For example, if the program is executed as
+\begin{verbatim}
+    mac: ./ass1-soln fully fun < test1.txt
+\end{verbatim}
+there are two terms: string {\cmp{fully}}, pointed at by
+{\cmp{argv[1]}}; and string {\cmp{fun}}, pointed at by
+{\cmp{argv[2]}}.
+
+To score an input line against a set of terms, we consider each
+character position in the line in turn.
+For the $i$\,th character, we calculate the longest {\emph{prefix
+match length}} against the set of terms; let's call that maximum
+value $\ell_i$.
+The score for the line as a whole is then given by $S=\sum_{i}
+(2^{\min(\ell_i,10)}-1)$.
+Table~\ref{tbl} shows an example, using {\cmp{fully}} and {\cmp{fun}}
+as a two term query, and using {\cmp{.}}
+to indicate places where the prefix match length is zero.
+All matching is case-insensitive; every character position in the
+line is a potential match point for each term; scores will always be
+integers; and the terms could contain non-alphabetic characters too
+if we wanted to, but they will always be words without any digits,
+punctuation, or whitespace characters in all of out test cases.
+
+\begin{table}[b]
+\centering
+\begin{tabular}{r@{\hspace*{2em}}l}
+\toprule
+\multirow{2}{*}{$i$}
+	& \tt 0~~~~~~~~~1~~~~~~~~~2~~~~~~~~~3~~~~~~~~~4
+\\
+	& \tt 01234567890123456789012345678901234567890
+\\
+	& \tt |~~~~|~~~~|~~~~|~~~~|~~~~|~~~~|~~~~|~~~~|
+\\
+line to be scored
+	& \tt Functions are often full of useful funny!
+\\[1ex]
+term \tt ~fully
+	& \tt 2..............1....4.....1....3...2.....
+\\
+term \tt ~~~fun
+	& \tt 3..............1....2.....1....2...3.....
+\\[1ex]
+\it maximum, $\ell_i$
+	& \tt 3..............1....4.....1....3...3.....
+\\[1ex]
+\it score =
+	& $(2^3-1) + (2^1-1) + (2^4-1) + (2^1-1) + (2^3-1) + (2^3-1) = 38$
+\\
+\bottomrule
+\end{tabular}
+\caption{Example of the required scoring calculation, with two terms
+{\cmp{fully}} and {\cmp{fun}} and a single line containing 41
+characters.
+Numbers represent the length of the character match at that position
+in the input line, with {\cmp{.}}
+used instead of zero.
+Matching is insensitive to case.
+\label{tbl}}
+\end{table}
+The Stage 2 output demonstrates that you have correctly implemented
+the scoring process, printing the score for the first and
+last input line in a second  output block:
+%%  0123456789012345678901234567890123456789
+\begin{verbatim}
+    Stage 2
+    -------
+    line   0:
+    -> Programming is fun and functions are fun.
+    -> score =  21
+    line   8:
+    -> Functions are often full of useful funny!
+    -> score =  38
+\end{verbatim}
+See the LMS page for a range of complete output examples.
+
+
+\subsection*{Stage 3 -- Presenting Answers (marks up to 20/20)}
+
+Of course, what we really want to see is the set of ``best'' matches
+between the query terms and the input lines.
+Here is the Stage 3 output that is required if the query
+{\cmp{fully}} {\cmp{fun}} is run against the {\cmp{test1.txt}} file: 
+%%  0123456789012345678901234567890123456789
+\begin{verbatim}
+    Stage 3
+    -------
+    line   8:
+    -> Functions are often full of useful funny!
+    -> score =  38
+    line   5:
+    -> We should probably protest forcefully when that happens.
+    -> score =  32
+    line   0:
+    -> Programming is fun and functions are fun.
+    -> score =  21
+    line   1:
+    -> A function can also offer a reception or an event or a protocol.
+    -> score =   9
+    line   2:
+    -> When funny things are provided we are supposed laugh our heads off.
+    -> score =   9
+\end{verbatim}
+You may again assume that you can use straightforward techniques to
+compute the {\cmp{TOP\_SCORES}} (set to {5} in the skeleton program)
+best-scoring lines.
+If two lines have the same score, the one with the smaller line
+number should be presented first.
+And an additional note: you can achieve the required output using
+storing just ${\cmp{TOP\_SCORES}}+2$ lines if you want to be clever.
+But you will not be penalized if you store all of the input lines,
+and your program will be simpler to both implement and understand.
+
+And the final word?
+You need to end your output with an exclamation of algorithmic
+satisfaction:
+%%  0123456789012345678901234567890123456789
+\begin{verbatim}
+    tadaa!
+\end{verbatim}
+
+\subsection*{General Tips...}
+
+Make use of the {\cmp{DEBUG}} constant while you are developing your
+program.
+Debugging code can be left in your final program, {\emph{provided
+that {\cmp{DEBUG}} is set to {\cmp{0}} when you submit it}}.
+
+The sequence of stages described in this handout is deliberate -- it
+represents a sensible path through to the final program.
+You can, of course, ignore the advice and try and write final program
+in a single effort, without developing it incrementally and testing
+it in phases.
+You might even get away with it, this time and at this somewhat
+limited scale.
+But in general, one of the key things that makes some people better
+at programming than others is the ability to see a design path
+through simple programs, to more comprehensive programs, to final
+programs, that keeps the complexity under control at all times.
+That is one of the skills this subject is intended to teach you.
+And if you submit each of the stages as you complete it, you'll know
+that you are accumulating evidence should you need to demonstrate
+your progress in the event of a special consideration application
+becoming necessary.
+
+To get maximum marks for each stage your output must be identical to
+the examples provided (yes, even whitespace), and your program must
+conform to the style expectations listed in the rubric.
+
+\subsection*{Boring But Important...}
+
+\noindent
+This project is worth 5\% of your final mark, due date
+{\bf{6:00pm on Thursday 10 September}}.
+You will then (for another 5\%) complete a closed-book quiz about it
+in your workshop class the next week.
+\medskip
+
+\noindent
+\input{../../boringstuff.tex}
+\medskip
+
+\paragraph*{Use of AI}
+
+You may use of AI tools in any way that you wish while undertaking
+this project, including submitting an AI-generated solution.
+Note that the skeleton program contains a declaration at the top
+{\emph{that must be completed accurately}}.
+Failure to complete it will lead to an automatic mark penalty.
+
+More importantly, the exam will test your ability to write functions.
+{\bf{If you rely on AI to write your whole assignment submission, you
+will not build the required ability.}}
+That is, while use of AI is permitted, and may allow you to work more
+speedily, over-reliance on it will likely {\emph{decrease}} your exam
+mark, and put you at risk of a ``49 NH'' hurdle failure grade.
+
+\paragraph*{Academic Honesty}
+
+You may discuss your work during your workshop, and with others in
+the class, but what gets typed into your program must be individual
+work.
+Do {\bf{not}} give hard copy or soft copy of your work to anyone
+else, and do {\bf{not}} ask others to give you their programs.
+See {\url{https://academicintegrity.unimelb.edu.au}} for more
+information.
+\begin{center}
+\fbox{
+\begin{minipage}{0.97\textwidth}
+\centering
+{\emph{The skeleton program includes an Authorship and Use of AI
+Declaration that you must complete and ``sign'' as part of your
+submitted program.
+Marks will be deducted if you do not include the declaration, or do
+not sign it, or do not comply with its expectations.
+}}
+\end{minipage}
+}
+\end{center}
+Nor should you post your code to any public location ({\tt{github}},
+{\tt{codeshare.io}}, etc) while the assignment is active or prior to
+the release of the assignment marks.
+
+\paragraph*{Special Consideration}
+
+Students seeking extensions for medical or other ``outside my
+control'' reasons must lodge a request following the process linked
+from the LMS page, and do so as soon as possible after those
+circumstances arise.
+Documentary support may be required.
+\bigskip
+
+{\emph{And remember, algorithms are fun!}}
+\bigskip
+
+\vfill\noindent%
+{\tiny{{\copyright} The University of Melbourne, 2026.
+Prepared by Alistair Moffat, ammoffat@unimelb.edu.au.}}
+\end{document}
+
+%%
+%% And now, just for fun, another complete copy, so that each line
+%% appears twice
+%%
+
+%% %% Author: Alistair Moffat, ammoffat@unimelb.edu.au
+%% %% Date:   August 2026
+%% %% 
+%% \documentclass[11pt,times]{article}
+%% 
+%% \usepackage{times}
+%% \usepackage{url}
+%% \usepackage{xspace}
+%% \usepackage{epsf}
+%% \usepackage{graphicx}
+%% \usepackage{booktabs}
+%% \usepackage{enumitem}
+%% \usepackage{multirow}
+%% 
+%% \renewcommand{\ttdefault}{cmtt}
+%% \newcommand{\cmp}[1]{{\mbox{\tt{#1}}}}
+%% \newcommand{\var}[1]{{\mbox{\emph{#1}}}}
+%% 
+%% \usepackage[a4paper,margin=27mm]{geometry}
+%% 
+%% \newcommand{\D}{\hphantom{0}}
+%% \newcommand{\keypoint}[1]{{\bf #1}}
+%% 
+%% \renewcommand{\baselinestretch}{1.00}
+%% 
+%% \setlist[itemize,1]{leftmargin=6mm,itemsep=0mm}
+%% \setlist[enumerate,1]{leftmargin=6mm,itemsep=0mm}
+%% 
+%% \begin{document}
+%% 
+%% 
+%% \begin{center}
+%% {\bf School of Computing and Information Systems}\\[1mm]
+%% {\Large\bf
+%% comp10002 Foundations of Algorithms\\[1mm]
+%% Semester 2, 2026}\\[2mm]
+%% {\Large\bf Assignment 1 -- 20 marks, 5\% of final grade}
+%% \end{center}
+%% 
+%% 
+%% \subsection*{Learning Outcomes}
+%% 
+%% In this assignment you will demonstrate your understanding of arrays,
+%% strings, functions, and the {\cmp{typedef}} facility.
+%% You may also (but are not required to) use {\cmp{struct}}s (Chapter
+%% 8) if you wish.
+%% You must {\emph{not}} make any use of file operations (Chapter 11) in
+%% this project, and are also strongly discouraged from using
+%% {\cmp{malloc()}} (Chapter 10).
+%% 
+%% \subsection*{The Story...}
+%% 
+%% We all know that most software applications support the use of
+%% {\verb+^F+} (command- or control-F) to search.
+%% Used from the commandline, the Unix tool {\cmp{grep}} provides the
+%% same ability, and scans text files to identify the lines in files
+%% that exactly match a pattern supplied as a command-line argument.
+%% However there are also times when we want to perform a less precisely
+%% defined search, looking for partial matches against multiple strings,
+%% rather than exact matches against one string.
+%% For example, we might be unsure of how to spell someone's name, and
+%% hope that the search for ``{\cmp{alister moffet}}'' helps us also
+%% find references to ``{\cmp{Alistair Moffat}}'' and ``{\cmp{Alastair
+%% Moffet}}''.
+%% 
+%% In this project you will write a program that reads text from
+%% {\cmp{stdin}}, generates a score for each input line relative to
+%% a multi-term query supplied on the command-line, and then, once the
+%% end of the input is reached, prints out a set of input lines that
+%% have the highest scores.
+%% You do {\emph{not}} need to implement the clever pattern search
+%% algorithms that will get discussed in class; and are encouraged to
+%% use straightforward techniques, including any suitable functions in
+%% {\cmp{string.h}}.
+%% Over a typical query of a few terms and an input of a thousand lines,
+%% simple implementations should still operate quickly.
+%% 
+%% \subsection*{Input Data}
+%% 
+%% Input to your program will come in two parts: a {\emph{query}},
+%% specified on the command-line (see Section 7.11 of the textbook) as a
+%% sequence of strings; and lines of text, to be (always) read from
+%% {\cmp{stdin}}.
+%% {\emph{If you vary from these requirements the automated testing
+%% process may fail your program!}}
+%% 
+%% A range of text input data will be used during the post-submission
+%% testing, and some initial ``visible tests'' are also linked from the
+%% LMS assignment page.
+%% You should also check your program against other inputs.
+%% Testing and debugging is {\emph{your}} responsibility.
+%% 
+%% \subsection*{Stage 0 -- Start Early! (marks up to 0/20)}
+%% 
+%% Your first step is to copy and read the skeleton program
+%% {\cmp{ass1-skel.c}} from the LMS Assignment 1 page.
+%% Check that you can compile it via using either a fresh {\cmp{Ed
+%% Lessons}} workspace (see the guide in the LMS, ``Modules
+%% $\rightarrow$ Compiling and Editing $\rightarrow$ Guides to Using Ed
+%% Lessons'') or a terminal shell and {\cmp{gcc}}.
+%% Then study what it does, and try some sample executions, either
+%% typing few lines of input from the keyboard, or running it over a
+%% text file from your computer, perhaps one of the test files:
+%% \begin{verbatim}
+%%     mac: ./ass1-skel fee fi fo fum < test1.txt
+%% \end{verbatim}
+%% Make sure that you understand the role of the {\cmp{DEBUG}} constant.
+%% Try changing it to {\cmp{0}} and compile and run again.
+%% (And make sure it is {\cmp{0}} before you make your final
+%% submission.)
+%% 
+%% \subsection*{Stage 1 -- Building Arrays (marks up to 12/20)}
+%% 
+%% Modify the skeleton program so that the input text is read into an
+%% array.
+%% You are to assume that the number of input lines will never exceed
+%% {\cmp{MAX\_LINES}} (set to 999), and that the number of characters in
+%% any line will never exceed {\cmp{MAX\_CHARS}} (set to 80).
+%% Any input beyond these two limits may be silently discarded.
+%% Here is what your output should be for the test file
+%% {\cmp{test1.txt}} (from the LMS Assignment 1 page), printing out the
+%% average line length, and then the first and last input lines and
+%% their lengths:
+%% %%  0123456789012345678901234567890123456789
+%% \begin{verbatim}
+%%     Stage 1
+%%     -------
+%%     average input line = 51.44 characters
+%%     line   0:
+%%     -> Programming is fun and functions are fun.
+%%     -> length =  41
+%%     line   8:
+%%     -> Functions are often full of useful funny!
+%%     -> length =  41
+%% \end{verbatim}
+%% The goal of this stage is simply for you to read the data into an
+%% array.
+%% That means rewriting parts of the skeleton program as well as adding
+%% new functions to it.
+%% Note that the line numbers start at zero.
+%% 
+%% \subsection*{Stage 2 -- Computing Scores (marks up to 16/20)}
+%% 
+%% The next step is to calculate a {\emph{score}} for each input line in
+%% connection with the ``query'' provided on the commandline.
+%% The skeleton program shows you how to access the ${\cmp{argc}}-1$
+%% program arguments.
+%% For example, if the program is executed as
+%% \begin{verbatim}
+%%     mac: ./ass1-soln fully fun < test1.txt
+%% \end{verbatim}
+%% there are two terms: string {\cmp{fully}}, pointed at by
+%% {\cmp{argv[1]}}; and string {\cmp{fun}}, pointed at by
+%% {\cmp{argv[2]}}.
+%% 
+%% To score an input line against a set of terms, we consider each
+%% character position in the line in turn.
+%% For the $i$\,th character, we calculate the longest {\emph{prefix
+%% match length}} against the set of terms; let's call that maximum
+%% value $\ell_i$.
+%% The score for the line as a whole is then given by $S=\sum_{i}
+%% (2^{\min(\ell_i,10)}-1)$.
+%% Table~\ref{tbl} shows an example, using {\cmp{fully}} and {\cmp{fun}}
+%% as a two term query, and using {\cmp{.}}
+%% to indicate places where the prefix match length is zero.
+%% All matching is case-insensitive; every character position in the
+%% line is a potential match point for each term; scores will always be
+%% integers; and the terms could contain non-alphabetic characters too
+%% if we wanted to, but they will always be words without any digits,
+%% punctuation, or whitespace characters in all of out test cases.
+%% 
+%% \begin{table}[b]
+%% \centering
+%% \begin{tabular}{r@{\hspace*{2em}}l}
+%% \toprule
+%% \multirow{2}{*}{$i$}
+%% 	& \tt 0~~~~~~~~~1~~~~~~~~~2~~~~~~~~~3~~~~~~~~~4
+%% \\
+%% 	& \tt 01234567890123456789012345678901234567890
+%% \\
+%% 	& \tt |~~~~|~~~~|~~~~|~~~~|~~~~|~~~~|~~~~|~~~~|
+%% \\
+%% line to be scored
+%% 	& \tt Functions are often full of useful funny!
+%% \\[1ex]
+%% term \tt ~fully
+%% 	& \tt 2..............1....4.....1....3...2.....
+%% \\
+%% term \tt ~~~fun
+%% 	& \tt 3..............1....2.....1....2...3.....
+%% \\[1ex]
+%% \it maximum, $\ell_i$
+%% 	& \tt 3..............1....4.....1....3...3.....
+%% \\[1ex]
+%% \it score =
+%% 	& $(2^3-1) + (2^1-1) + (2^4-1) + (2^1-1) + (2^3-1) + (2^3-1) = 38$
+%% \\
+%% \bottomrule
+%% \end{tabular}
+%% \caption{Example of the required scoring calculation, with two terms
+%% {\cmp{fully}} and {\cmp{fun}} and a single line containing 41
+%% characters.
+%% Numbers represent the length of the character match at that position
+%% in the input line, with {\cmp{.}}
+%% used instead of zero.
+%% Matching is insensitive to case.
+%% \label{tbl}}
+%% \end{table}
+%% The Stage 2 output demonstrates that you have correctly implemented
+%% the scoring process, printing the score for the first and
+%% last input line in a second  output block:
+%% %%  0123456789012345678901234567890123456789
+%% \begin{verbatim}
+%%     Stage 2
+%%     -------
+%%     line   0:
+%%     -> Programming is fun and functions are fun.
+%%     -> score =  21
+%%     line   8:
+%%     -> Functions are often full of useful funny!
+%%     -> score =  38
+%% \end{verbatim}
+%% See the LMS page for a range of complete output examples.
+%% 
+%% 
+%% \subsection*{Stage 3 -- Presenting Answers (marks up to 20/20)}
+%% 
+%% Of course, what we really want to see is the set of ``best'' matches
+%% between the query terms and the input lines.
+%% Here is the Stage 3 output that is required if the query
+%% {\cmp{fully}} {\cmp{fun}} is run against the {\cmp{test1.txt}} file: 
+%% %%  0123456789012345678901234567890123456789
+%% \begin{verbatim}
+%%     Stage 3
+%%     -------
+%%     line   8:
+%%     -> Functions are often full of useful funny!
+%%     -> score =  38
+%%     line   5:
+%%     -> We should probably protest forcefully when that happens.
+%%     -> score =  32
+%%     line   0:
+%%     -> Programming is fun and functions are fun.
+%%     -> score =  21
+%%     line   1:
+%%     -> A function can also offer a reception or an event or a protocol.
+%%     -> score =   9
+%%     line   2:
+%%     -> When funny things are provided we are supposed laugh our heads off.
+%%     -> score =   9
+%% \end{verbatim}
+%% You may again assume that you can use straightforward techniques to
+%% compute the {\cmp{TOP\_SCORES}} (set to {5} in the skeleton program)
+%% best-scoring lines.
+%% If two lines have the same score, the one with the smaller line
+%% number should be presented first.
+%% And an additional note: you can achieve the required output using
+%% storing just ${\cmp{TOP\_SCORES}}+2$ lines if you want to be clever.
+%% But you will not be penalized if you store all of the input lines,
+%% and your program will be simpler to both implement and understand.
+%% 
+%% And the final word?
+%% You need to end your output with an exclamation of algorithmic
+%% satisfaction:
+%% %%  0123456789012345678901234567890123456789
+%% \begin{verbatim}
+%%     tadaa!
+%% \end{verbatim}
+%% 
+%% \subsection*{General Tips...}
+%% 
+%% Make use of the {\cmp{DEBUG}} constant while you are developing your
+%% program.
+%% Debugging code can be left in your final program, {\emph{provided
+%% that {\cmp{DEBUG}} is set to {\cmp{0}} when you submit it}}.
+%% 
+%% The sequence of stages described in this handout is deliberate -- it
+%% represents a sensible path through to the final program.
+%% You can, of course, ignore the advice and try and write final program
+%% in a single effort, without developing it incrementally and testing
+%% it in phases.
+%% You might even get away with it, this time and at this somewhat
+%% limited scale.
+%% But in general, one of the key things that makes some people better
+%% at programming than others is the ability to see a design path
+%% through simple programs, to more comprehensive programs, to final
+%% programs, that keeps the complexity under control at all times.
+%% That is one of the skills this subject is intended to teach you.
+%% And if you submit each of the stages as you complete it, you'll know
+%% that you are accumulating evidence should you need to demonstrate
+%% your progress in the event of a special consideration application
+%% becoming necessary.
+%% 
+%% To get maximum marks for each stage your output must be identical to
+%% the examples provided (yes, even whitespace), and your program must
+%% conform to the style expectations listed in the rubric.
+%% 
+%% \subsection*{Boring But Important...}
+%% 
+%% \noindent
+%% This project is worth 5\% of your final mark, due date
+%% {\bf{6:00pm on Thursday 10 September}}.
+%% You will then (for another 5\%) complete a closed-book quiz about it
+%% in your workshop class the next week.
+%% \medskip
+%% 
+%% \noindent
+%% \input{../../boringstuff.tex}
+%% \medskip
+%% 
+%% \paragraph*{Use of AI}
+%% 
+%% You may use of AI tools in any way that you wish while undertaking
+%% this project, including submitting an AI-generated solution.
+%% Note that the skeleton program contains a declaration at the top
+%% {\emph{that must be completed accurately}}.
+%% Failure to complete it will lead to an automatic mark penalty.
+%% 
+%% More importantly, the exam will test your ability to write functions.
+%% {\bf{If you rely on AI to write your whole assignment submission, you
+%% will not build the required ability.}}
+%% That is, while use of AI is permitted, and may allow you to work more
+%% speedily, over-reliance on it will likely {\emph{decrease}} your exam
+%% mark, and put you at risk of a ``49 NH'' hurdle failure grade.
+%% 
+%% \paragraph*{Academic Honesty}
+%% 
+%% You may discuss your work during your workshop, and with others in
+%% the class, but what gets typed into your program must be individual
+%% work.
+%% Do {\bf{not}} give hard copy or soft copy of your work to anyone
+%% else, and do {\bf{not}} ask others to give you their programs.
+%% See {\url{https://academicintegrity.unimelb.edu.au}} for more
+%% information.
+%% \begin{center}
+%% \fbox{
+%% \begin{minipage}{0.97\textwidth}
+%% \centering
+%% {\emph{The skeleton program includes an Authorship and Use of AI
+%% Declaration that you must complete and ``sign'' as part of your
+%% submitted program.
+%% Marks will be deducted if you do not include the declaration, or do
+%% not sign it, or do not comply with its expectations.
+%% }}
+%% \end{minipage}
+%% }
+%% \end{center}
+%% Nor should you post your code to any public location ({\tt{github}},
+%% {\tt{codeshare.io}}, etc) while the assignment is active or prior to
+%% the release of the assignment marks.
+%% 
+%% \paragraph*{Special Consideration}
+%% 
+%% Students seeking extensions for medical or other ``outside my
+%% control'' reasons must lodge a request following the process linked
+%% from the LMS page, and do so as soon as possible after those
+%% circumstances arise.
+%% Documentary support may be required.
+%% \bigskip
+%% 
+%% {\emph{And remember, algorithms are fun!}}
+%% \bigskip
+%% 
+%% \vfill\noindent%
+%% {\tiny{{\copyright} The University of Melbourne, 2026.
+%% Prepared by Alistair Moffat, ammoffat@unimelb.edu.au.}}
+%% \end{document}
