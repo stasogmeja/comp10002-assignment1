@@ -94,6 +94,8 @@ typedef char line_t[MAX_CHARS+1];
 int  read_one_line(line_t line, int max);
 int line_length(line_t line);
 double average_length(line_t lines[], int nlines);
+int prefix_match(line_t line, int position, const char *term);
+int line_score(line_t line, int argc, char *argv[]);
 void  print_stage(int stg);
 void  tadaa(void);
 
@@ -110,6 +112,9 @@ main(int argc, char *argv[]) {
 
 	// number of lines successfully read so far 
 	int nlines = 0;
+
+	// scores[i] stores the score calculated for lines[i]
+	int scores[MAX_LINES];
 
 	// this first loop is here to show you how to access the strings
 	// provided on the commandline, and will only generate output
@@ -154,6 +159,25 @@ main(int argc, char *argv[]) {
 		printf("line %3d:\n", nlines - 1);
 		printf("-> %s\n", lines[nlines - 1]);
 		printf("-> length = %3d\n", line_length(lines[nlines - 1]));
+	}
+
+	// calculate one score for each input line
+	for (int i = 0; i < nlines; i++) {
+		scores[i] = line_score(lines[i], argc, argv);
+	}
+
+	print_stage(2);
+
+	if (nlines > 0) {
+		// display the first line with the calculated score
+		printf("line   0:\n");
+		printf("-> %s\n", lines[0]);
+		printf("-> score = %3d\n", scores[0]);
+
+		// display the last stored line with the calculated score
+		printf("line %3d:\n", nlines - 1);
+		printf("-> %s\n", lines[nlines - 1]);
+		printf("-> score = %3d\n", scores[nlines - 1]);
 	}
 
 	// and at the end, a traditional comp10002 sign-off...
@@ -240,5 +264,66 @@ average_length(line_t lines[], int nlines) {
 	}
 
 	return (double) total / nlines;
+}
+
+// find the length of the matching prefix between line[position] and term;
+// matching is case-insensitive and stops at MAX_MATCH characters
+int
+prefix_match(line_t line, int position, const char *term) {
+	int match_len = 0;
+
+	// continue while:
+	// the line has not ended,
+	// the search term has not ended,
+	// the current characters are equal ignoring case
+	while (line[position + match_len] != '\0' && term[match_len] != '\0' && 
+		   // cast to unsigned char for safe tolower() call
+		   tolower((unsigned char) line[position + match_len]) == 
+		   tolower((unsigned char) term[match_len])) {
+		match_len++;
+
+		// do not allow a match longer than MAX_MATCH
+		if (match_len == MAX_MATCH) {
+			break;
+		}
+	}
+
+	return match_len;
+}
+
+// calculate the score of one line against all command-line terms
+int
+line_score(line_t line, int argc, char *argv[]) {
+	int score = 0;
+	int len = line_length(line);
+
+	// check every character position in the line
+	for (int position = 0; position < len; position++) {
+		int longest = 0;
+
+		// argv[1] ... argv[argc-1] are the query terms,
+		// argv[0] is the program name thus skipped
+		for (int argnum = 1; argnum < argc; argnum++) {
+			int current = prefix_match(line, position, argv[argnum]);
+
+			// keep the longest matching term at this position
+			if (current > longest) {
+				longest = current;
+			}
+		}
+
+		// convert the longest match length into its score constrction: 
+		// 2^longest - 1
+		if (longest > MAX_MATCH) {
+			longest = MAX_MATCH;
+		}
+
+		if (longest > 0) {
+			// use bit shift
+			score += (1 << longest) - 1;
+		}
+	}
+
+	return score;
 }
 /**********************************************************************/
