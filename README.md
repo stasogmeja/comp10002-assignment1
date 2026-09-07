@@ -12,7 +12,6 @@ reported.
 ## Files
 
 - ass1.c          : main program
-- ass1-skel.c     : original skeleton provided by the subject
 - test1.txt       : sample test data
 - test2.txt       : sample test data
 - test3.txt       : sample test data
