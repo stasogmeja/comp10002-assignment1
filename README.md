@@ -21,3 +21,10 @@ reported.
 
 ```bash
 gcc -Wall -o ass1 ass1.c
+```
+
+## Example Usage
+
+```bash
+ass1 fully fun < test1.txt
+```
