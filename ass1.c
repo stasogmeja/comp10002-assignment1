@@ -61,8 +61,8 @@
    determined via the University of Melbourne Academic Honesty
    Policy, as described at https://academicintegrity.unimelb.edu.au.
 
-   Signed by: [Enter your full name and student number here before submission]
-   Dated:     [Enter the date that you "signed" the declaration]
+   Signed by: Sutong Zhao 1884449
+   Dated:     2026-09-08
 
 */
 
@@ -91,13 +91,15 @@ typedef char line_t[MAX_CHARS+1];
 
 /**********************************************************************/
 
-int  read_one_line(line_t line, int max);
-int line_length(line_t line);
+int    read_one_line(line_t line, int max);
+int    line_length(line_t line);
 double average_length(line_t lines[], int nlines);
-int prefix_match(line_t line, int position, const char *term);
-int line_score(line_t line, int argc, char *argv[]);
-void  print_stage(int stg);
-void  tadaa(void);
+int    prefix_match(line_t line, int position, const char *term);
+int    line_score(line_t line, int argc, char *argv[]);
+void   print_line(line_t line, int line_num);
+void   print_top_lines(line_t lines[], int scores[], int nlines);
+void   print_stage(int stg);
+void   tadaa(void);
 
 /**********************************************************************/
 
@@ -180,6 +182,10 @@ main(int argc, char *argv[]) {
 		printf("-> score = %3d\n", scores[nlines - 1]);
 	}
 
+	print_stage(3);
+
+	print_top_lines(lines, scores, nlines);
+
 	// and at the end, a traditional comp10002 sign-off...
 	tadaa();
 
@@ -207,8 +213,8 @@ tadaa(void) {
 /**********************************************************************/
 
 // function to read one line from stdin into character array
-// returns either EOF or the length of the string placed into line[], up
-// to a maximum of "max" characters
+// returns either EOF or the length of the string placed into line[],
+// up to a maximum of "max" characters
 int
 read_one_line(line_t line, int max) {
 
@@ -326,4 +332,48 @@ line_score(line_t line, int argc, char *argv[]) {
 
 	return score;
 }
+
+// print one line and its line number
+void
+print_line(line_t line, int line_num) {
+	printf("line   %d:\n", line_num);
+	printf("-> %s\n", line);
+}
+
+// print up to TOP_SCORES lines with the highest scores;
+// the smaller line number comes first if two lines have the same scores
+void
+print_top_lines(line_t lines[], int scores[], int nlines) {
+	// initialising the array with {0} sets every element to zero;
+	// selected[i] == 1 means line i has already been selected for output
+	int selected[MAX_LINES] = {0};
+
+	// we cannot print more than either nlines or TOP_SCORES lines
+	int limit = nlines < TOP_SCORES ? nlines : TOP_SCORES;
+
+	// select one best unused line at a time
+	for (int rank = 0; rank < limit; rank++) {
+		int best = -1;
+
+		for (int i = 0; i < nlines; i++) {
+			// select i if no candidate has been chosen yet, or if
+			// its score is larger,
+			// its score is equal but its line number is smaller;
+			// iterating from smallest to largest line number naturally
+			// handle ties: earlier lines are selected first
+			if (!selected[i] && 
+				(best == -1 || scores[i] > scores[best])) {
+				best = i;
+			}
+		}
+
+		// mark the selected line so that it cannot be selected again
+		selected[best] = 1;
+
+		// print the selected line and its score
+		print_line(lines[best], best);
+		printf("-> score = %3d\n", scores[best]);
+	}
+}
+
 /**********************************************************************/
