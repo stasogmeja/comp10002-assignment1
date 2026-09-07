@@ -52,8 +52,7 @@
 
    (4) The AI system(s) that I used are:
 
-   [Type a type a list of the AI systems that you used while doing
-   this assignment, or "None"]
+   None.
 
    (5) I understand that submitting for assessment work developed
    in collaboration with other people constitutes Academic Misconduct,
@@ -336,7 +335,7 @@ line_score(line_t line, int argc, char *argv[]) {
 // print one line and its line number
 void
 print_line(line_t line, int line_num) {
-	printf("line   %d:\n", line_num);
+	printf("line %3d:\n", line_num);
 	printf("-> %s\n", line);
 }
 
