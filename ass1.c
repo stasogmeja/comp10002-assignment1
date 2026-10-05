@@ -130,7 +130,7 @@ main(int argc, char *argv[]) {
 	// read stdin one line at a time;
 	// the first condition prevents writing beyond lines[MAX_LINES-1]
 	while (nlines < MAX_LINES && 
-		  (len = read_one_line(lines[nlines], MAX_CHARS)) != EOF) {
+		(len = read_one_line(lines[nlines], MAX_CHARS)) != EOF) {
 		
 		// this printf is also for debugging purposes and the
 		// output it generates should NOT be showing when you
@@ -149,7 +149,7 @@ main(int argc, char *argv[]) {
 	if (nlines > 0) {
 		// print the average length of all stored input lines
 		printf("average line = %.2f characters\n", 
-			   average_length(lines, nlines));
+			average_length(lines, nlines));
 		
 		// print the first input line and its length
 		printf("line   0:\n");
@@ -282,9 +282,9 @@ prefix_match(line_t line, int position, const char *term) {
 	// the search term has not ended,
 	// the current characters are equal ignoring case
 	while (line[position + match_len] != '\0' && term[match_len] != '\0' && 
-		   // cast to unsigned char for safe tolower() call
-		   tolower((unsigned char) line[position + match_len]) == 
-		   tolower((unsigned char) term[match_len])) {
+		// cast to unsigned char for safe tolower() call
+		tolower((unsigned char) line[position + match_len]) == 
+		tolower((unsigned char) term[match_len])) {
 		match_len++;
 
 		// do not allow a match longer than MAX_MATCH
